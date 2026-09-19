@@ -1,0 +1,19 @@
+# 本地配置（含真实路径与公司系统地址，不纳入版本库）
+config.json
+config1.json
+config1 - 副本.json
+config-back.json
+
+# 自检截图
+web/_shots/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
