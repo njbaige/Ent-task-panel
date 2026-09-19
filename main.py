@@ -45,7 +45,17 @@ class Api:
                 return {"ok": False, "error": "路径为空"}
             path = str(path).strip().replace("/", os.sep)
             if sys.platform == "win32":
-                os.startfile(path)  # noqa: 需要 Windows
+                # exe 程序：临时切到其所在目录再用 ShellExecute 启动（等同双击，必弹独立窗口），
+                # 启动后立即切回原目录，避免内部相对路径配置文件找不到
+                if os.path.isfile(path) and path.lower().endswith(".exe"):
+                    old_cwd = os.getcwd()
+                    try:
+                        os.chdir(os.path.dirname(path))
+                        os.startfile(path)  # noqa: 需要 Windows
+                    finally:
+                        os.chdir(old_cwd)
+                else:
+                    os.startfile(path)  # noqa: 需要 Windows
             elif sys.platform == "darwin":
                 subprocess.Popen(["open", path])
             else:

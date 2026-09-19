@@ -3,6 +3,7 @@ config.json
 config1.json
 config1 - 副本.json
 config-back.json
+config.ini
 
 # 自检截图
 web/_shots/

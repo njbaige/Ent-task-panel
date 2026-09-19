@@ -155,7 +155,7 @@
   /* 列表视图（紧凑） */
   .list-view .lrow{
     display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--card);border:1px solid var(--border);
-    border-radius:9px;margin-bottom:5px;box-shadow:var(--shadow);transition:transform .12s;
+    border-radius:9px;margin-bottom:5px;box-shadow:var(--shadow);transition:transform .12s;flex-wrap:wrap;
   }
   .list-view .lrow:hover{transform:translateY(-1px)}
   .list-view .lrow.done{opacity:.6}
@@ -163,7 +163,7 @@
   .list-view .lrow-main{flex:1;min-width:0}
   .list-view .lrow-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.3}
   .list-view .lrow-desc{font-size:11.5px;color:var(--text-sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .list-view .lrow-links{display:flex;gap:6px;flex-shrink:0}
+  .list-view .lrow-links{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
   .list-view .lrow-links .open-btn{padding:4px 9px;font-size:11.5px;gap:5px;border-radius:7px}
   .list-view .lrow-links .open-btn svg{width:13px;height:13px}
   .list-view .lrow-links .open-btn .lbl{max-width:100px}
@@ -179,6 +179,8 @@
   .collapse-btn:hover{background:var(--hover);color:var(--text)}
   .collapse-btn svg{width:14px;height:14px;transition:transform .2s}
   .group-title.collapsed .collapse-btn svg,.sub-group-title.collapsed .collapse-btn svg{transform:rotate(-90deg)}
+  .openall-btn{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:6px;color:var(--text-faint);background:transparent;border:1px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
+  .openall-btn:hover{background:var(--hover);color:var(--brand);border-color:var(--brand)}
 
   /* 拖拽 */
   .card,.lrow{user-select:none}
@@ -405,7 +407,8 @@ const ICONS = {
   grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
   list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>',
   empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h8M8 16h5" stroke-linecap="round"/></svg>',
-  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  openall:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 const PALETTE = ['#0d9488','#2563eb','#7c3aed','#ea580c','#db2777','#0891b2','#65a30d','#9333ea'];
 const STORE_KEY = 'workbench-tasks-v1';
@@ -592,6 +595,7 @@ function taskCard(t){
     </div>
     <div class="link-row">${linkBtns(t)}</div>
     <div class="card-foot">${priTag}<span class="card-ops">
+      ${(t.links||[]).length>1?`<button data-op="openall" title="打开本任务全部入口">${ICONS.openall}</button>`:''}
       <button data-op="edit" title="编辑">${ICONS.edit}</button>
       <button data-op="del" title="删除">${ICONS.trash}</button>
     </span></div>
@@ -610,6 +614,7 @@ function listRow(t){
     <div class="lrow-links">${linkBtns(t)}</div>
     <button class="star ${t.starred?'on':''}" title="${t.starred?'取消收藏置顶':'收藏置顶'}">${ICONS.star}</button>
     <span class="card-ops">
+      ${(t.links||[]).length>1?`<button data-op="openall" title="打开本任务全部入口">${ICONS.openall}</button>`:''}
       <button data-op="edit" title="编辑">${ICONS.edit}</button>
       <button data-op="del" title="删除">${ICONS.trash}</button>
     </span>
@@ -657,6 +662,7 @@ function renderMain(){
     html+=`<div class="group-title ${gCol?'collapsed':''}" data-act="collapse-cat" data-cat="${escAttr(g.cat.id)}" style="cursor:pointer">
       <button class="collapse-btn" title="折叠/展开">${ICONS.chevron}</button>
       <span class="gdot" style="background:${g.cat.color}"></span>${escHtml(g.cat.name)}<span class="gcount">${g.items.length}</span>
+      <button class="openall-btn" data-act="openall-cat" data-cat="${escAttr(g.cat.id)}" title="打开本组所有任务的全部链接">全部打开</button>
     </div>`;
     if(gCol) return;
     const subs=buildSubGroups(g.items);
@@ -665,7 +671,8 @@ function renderMain(){
       const sCol=isCollapsed(g.cat.id, sg.sub);
       if(showSub) html+=`<div class="sub-group"><div class="sub-group-title ${sCol?'collapsed':''}" data-act="collapse-sub" data-cat="${escAttr(g.cat.id)}" data-sub="${escAttr(sg.sub)}" style="cursor:pointer">
         <button class="collapse-btn" title="折叠/展开">${ICONS.chevron}</button>
-        ${escHtml(sg.sub)}<span class="gcount">${sg.items.length}</span></div>`;
+        ${escHtml(sg.sub)}<span class="gcount">${sg.items.length}</span>
+        <button class="openall-btn" data-act="openall-sub" data-cat="${escAttr(g.cat.id)}" data-sub="${escAttr(sg.sub)}" title="打开本组所有任务的全部链接">全部打开</button></div>`;
       if(!sCol){
         html+=isCard?`<div class="grid">${sg.items.map(taskCard).join('')}</div>`:`<div class="list-view">${sg.items.map(listRow).join('')}</div>`;
       }
@@ -680,6 +687,20 @@ function renderMain(){
       DB.ui.collapsed=DB.ui.collapsed||{}; DB.ui.collapsed[k]=!DB.ui.collapsed[k]; save(); render();
     };
   });
+  function openAllInGroup(catId, sub){
+    let items=DB.tasks.filter(t=>t.catId===catId);
+    if(sub) items=items.filter(t=>(t.subCat||'')===sub);
+    let opened=0;
+    items.forEach(t=>{(t.links||[]).forEach(l=>{ openLink(l); opened++; });});
+    toast(opened>0 ? `已打开 ${opened} 个入口` : '该分组没有可打开的链接');
+  }
+  content.querySelectorAll('[data-act="openall-cat"],[data-act="openall-sub"]').forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      if(b.dataset.act==='openall-cat') openAllInGroup(b.dataset.cat);
+      else openAllInGroup(b.dataset.cat, b.dataset.sub);
+    };
+  });
   content.querySelectorAll('[data-id]').forEach(row=>{
     const id=row.dataset.id;
     row.querySelector('.check').onclick=()=>{ const t=DB.tasks.find(x=>x.id===id); t.done=!t.done; save(); render(); };
@@ -688,6 +709,11 @@ function renderMain(){
     row.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy));
     const ed=row.querySelector('[data-op="edit"]'); if(ed) ed.onclick=()=>openDrawer(id);
     const dl=row.querySelector('[data-op="del"]'); if(dl) dl.onclick=()=>delTask(id);
+    const oa=row.querySelector('[data-op="openall"]'); if(oa) oa.onclick=()=>{
+      const t=DB.tasks.find(x=>x.id===id); let opened=0;
+      (t.links||[]).forEach(l=>{ openLink(l); opened++; });
+      toast(opened>0?`已打开 ${opened} 个入口`:'没有可打开的链接');
+    };
     row.draggable=true;
     row.addEventListener('dragstart',(e)=>{
       draggingId=id; e.dataTransfer.effectAllowed='move';
